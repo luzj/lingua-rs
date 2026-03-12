@@ -1,42 +1,61 @@
 name: Rust to WASM
 
-# 触发条件，可根据需求修改
 on:
   push:
     branches:
       - main
+    paths:
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'src/**'
+      - '**.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'src/**'
+      - '**.yml'
 
 jobs:
-  build-wasm:
+  wasm-build:
+    name: WASM Build
     runs-on: ubuntu-latest
+
     steps:
       # 1️⃣ Checkout 项目
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v6
 
-      # 2️⃣ 安装 Rust
+      # 2️⃣ 缓存 Cargo 依赖
+      - name: Cache Cargo registry & target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # 3️⃣ 安装 Rust
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-          components: rustfmt, clippy
 
-      # 3️⃣ 添加 WASM target
-      - name: Add WASM target
-        run: rustup target add wasm32-unknown-unknown
+      # 5️⃣ 安装 wasm-pack
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      # 4️⃣ 编译项目为 wasm
+      # 6️⃣ 编译 Rust → WASM
       - name: Build project as WASM
-        run: |
-          cargo build --release --target wasm32-unknown-unknown
+        run: wasm-pack build --release --target web
 
-      # 5️⃣ 上传生成的 wasm 作为 artifact
+      # 7️⃣ 上传生成的 wasm
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v3
         with:
           name: wasm-output
-          path: target/wasm32-unknown-unknown/release/*.wasm
+          path: pkg/*.wasm
