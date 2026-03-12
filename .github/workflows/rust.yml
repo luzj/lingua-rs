@@ -1,0 +1,42 @@
+name: Rust to WASM
+
+# 触发条件，可根据需求修改
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Checkout 项目
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ 安装 Rust
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      # 3️⃣ 添加 WASM target
+      - name: Add WASM target
+        run: rustup target add wasm32-unknown-unknown
+
+      # 4️⃣ 编译项目为 wasm
+      - name: Build project as WASM
+        run: |
+          cargo build --release --target wasm32-unknown-unknown
+
+      # 5️⃣ 上传生成的 wasm 作为 artifact
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: wasm-output
+          path: target/wasm32-unknown-unknown/release/*.wasm
